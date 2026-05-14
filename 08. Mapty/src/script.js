@@ -16,7 +16,6 @@ let mapEvent;
 class Workout {
     date = new Date();
     id = (Date.now() + "").slice(-10);
-    clicks = 0;
 
     constructor(coords, distance, duration) {
         this.coords = coords;
@@ -42,9 +41,6 @@ class Workout {
         ];
 
         this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${months[this.date.getMonth()]} ${this.date.getDate()}`;
-    }
-    click() {
-        this.clicks++;
     }
 }
 
@@ -90,6 +86,9 @@ class App {
 
     constructor() {
         this._getPosition();
+
+        this._getLocalStorage();
+
         form.addEventListener("submit", this._newWorkout.bind(this));
         inputType.addEventListener(
             "change",
@@ -123,12 +122,26 @@ class App {
         }).addTo(this.#map);
 
         this.#map.on("click", this._showForm.bind(this));
+
+        this.#workouts.forEach((workout) => {
+            this._renderWorkoutMarker(workout);
+        });
     }
 
     _showForm(mapE) {
         this.#mapEvent = mapE;
         form.classList.remove("hidden");
         inputDistance.focus();
+    }
+    _hideForm() {
+        inputDistance.value = "";
+        inputDuration.value = "";
+        inputCadence.value = "";
+        inputElevation.value = "";
+
+        form.computedStyleMap.display = "none";
+        form.classList.add("hidden");
+        setTimeout(() => (form.computedStyleMap.display = "grid"), 1000);
     }
 
     _toggleElevationField() {
@@ -183,11 +196,9 @@ class App {
 
         this._renderWorkoutMarker(workout);
         this._renderWorkout(workout);
+        this._hideForm();
 
-        inputDistance.value = "";
-        inputDuration.value = "";
-        inputCadence.value = "";
-        inputElevation.value = "";
+        this._setLocalStorage();
     }
 
     _renderWorkoutMarker(workout) {
@@ -261,7 +272,6 @@ class App {
 
     _moveToPopup(event) {
         const workoutEl = event.target.closest(".workout");
-        console.log(workoutEl);
 
         if (!workoutEl) {
             return;
@@ -277,8 +287,27 @@ class App {
                 duration: 1,
             },
         });
+    }
 
-        workout.click();
+    _setLocalStorage() {
+        localStorage.setItem("workouts", JSON.stringify(this.#workouts));
+    }
+
+    _getLocalStorage() {
+        const data = JSON.parse(localStorage.getItem("workouts"));
+
+        if (!data) return;
+
+        this.#workouts = data;
+
+        this.#workouts.forEach((workout) => {
+            this._renderWorkout(workout);
+        });
+    }
+
+    reset() {
+        localStorage.removeItem("workouts");
+        location.reload();
     }
 }
 
